@@ -1,0 +1,16 @@
+source:
+  type: filesystem
+  path: "/mnt/c/Users/RoySaumyadeep(DEVELO/project_migration/customer_data_0.csv"
+  file_type: "csv"
+
+job:
+  name: "sample_job"
+  schema: "public"
+  predicates: []
+
+destination:
+  format: "csv"
+  path: "/mnt/c/Users/RoySaumyadeep(DEVELO/project_migration/"
+  name: "output_file.csv"
+
+log_file: "/mnt/c/Users/RoySaumyadeep(DEVELO/project_migration/log_file.txt"
