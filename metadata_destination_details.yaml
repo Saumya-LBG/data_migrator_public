@@ -1,0 +1,9 @@
+---
+jobName: "metadata"
+jobDescription: "metadata transfer"
+destination:
+  format: "csv"
+  bucket: "GCP:Bucket"
+  path: "/mnt/c/Users/RoySaumyadeep(DEVELO/project_migration/"
+  name: "output_file"
+  prefix: "prefix"

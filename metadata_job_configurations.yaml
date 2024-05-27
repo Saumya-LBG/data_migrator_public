@@ -1,0 +1,21 @@
+---
+jobName: "metadata"
+jobDesc: "metadata transfer"
+source:
+  source_type: "FILE_SYSTEM"
+  path: "/mnt/c/Users/RoySaumyadeep(DEVELO/project_migration/customer_data_0.csv"
+  file_Type: "csv"
+  job_Configurations:
+  - columns:
+    - name: "id"
+      type: "number"
+      value_range: null
+    - name: "salary"
+      type: "float"
+      value_range: null
+    - name: "name"
+      type: "string"
+      value_range: null
+    - name: "image"
+      type: "binary"
+      value_range: null

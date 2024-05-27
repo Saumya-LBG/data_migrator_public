@@ -2,15 +2,16 @@ import os
 import yaml
 from pyspark.sql import SparkSession
 from pyspark.sql.types import *
+from datetime import datetime
 
 class datasourcefactory:
     @staticmethod
     def read_data_source(spark, source_details, job_config):
-        source_type = source_details['type']
+        source_type = source_details['source_type']
 
         if source_type == 'database':
             return DatabaseDataSource(spark, source_details, job_config)
-        elif source_type == 'filesystem':
+        elif source_type == 'FILE_SYSTEM':
             return FileSystemDataSource(spark, source_details, job_config)
         elif source_type in ['image', 'video']:
             return ImageOrVideoDataSource(spark, source_details, job_config)
@@ -54,7 +55,7 @@ class FileSystemDataSource(DataSource):
 
     def read_data(self):
         file_path = self.source_details['path']
-        file_type = self.source_details['file_type']
+        file_type = self.source_details['file_Type']
 
         if file_type == 'csv':
             return self.spark.read.csv(file_path, header=True, inferSchema=True)
@@ -67,10 +68,20 @@ class DataMigrator:
     def __init__(self, spark):
         self.spark = spark
 
-    def read_config_file(self, file_path):
-        with open(file_path, "r") as file:
-            config = yaml.safe_load(file)
-            return config
+    def read_config_file(self, *file_paths):
+        combined_config = {}
+
+        for file_path in file_paths:
+            try:
+                with open(file_path, "r") as file:
+                    config = yaml.safe_load(file)
+                    combined_config.update(config)
+            except FileNotFoundError:
+                print(f"File not found: {file_path}")
+            except yaml.YAMLError as exc:
+                print(f"Error parsing YAML file: {file_path}\n{exc}")
+
+        return combined_config
 
     def read_data_source(self, source_details, job_config):
         data_source = datasourcefactory.read_data_source(self.spark, source_details, job_config)
@@ -83,19 +94,27 @@ class DataMigrator:
     def write_to_destination(self, df, destination_details):
         file_format = destination_details.get('format', 'csv')
         path = destination_details.get('path', '')
-        name = destination_details.get('name', '')
+        name = destination_details.get('name', 'output_file')
 
         if not path:
             raise ValueError("Destination path is required in the configuration.")
 
-        output_path = os.path.join(path, name) if name else path
+        # Get today's date and format it
+        today = datetime.today().strftime('%d-%m-%Y')
 
+        # Construct the output file name
+        output_file_name = f"{name}_{today}"
+
+        # Determine the full output path
+        output_path = os.path.join(path, output_file_name)
+
+        # Write the DataFrame to the destination path with overwrite mode
         if file_format == 'parquet':
-            df.write.parquet(output_path)
+            df.write.mode('overwrite').parquet(output_path)
         elif file_format == 'csv':
-            df.write.csv(output_path)
+            df.write.mode('overwrite').csv(output_path)
         elif file_format == 'json':
-            df.write.json(output_path)
+            df.write.mode('overwrite').json(output_path)
         else:
             raise ValueError(f"Unsupported file format: {file_format}")
 
@@ -105,15 +124,22 @@ class DataMigrator:
         self.write_to_destination(df, destination_details)
 
 if __name__ == "__main__":
-    config_file = "sample.yaml"
+    config_file = "metadata_job_configurations.yaml"
+    config_file_des = "metadata_destination_details.yaml"
+    config_file_access = "metadata_access_data.yaml"
+    
     job_name = os.path.splitext(os.path.basename(config_file))[0]
+    parts = job_name.split('_')
+    job_name = parts[0]
+    
     spark = SparkSession.builder \
         .appName(job_name) \
         .getOrCreate()
 
     migrator = DataMigrator(spark)
-    config = migrator.read_config_file(config_file)
-    source_details = config.get('source', {})
-    job_config = config.get('job', {})
-    destination_details = config.get('destination', {})
+    combined_config = migrator.read_config_file(config_file, config_file_des, config_file_access)
+    source_details = combined_config.get('source', {})
+    job_config = combined_config.get('job', {})
+    destination_details = combined_config.get('destination', {})
     migrator.migrate_data(source_details, job_config, destination_details)
+    
