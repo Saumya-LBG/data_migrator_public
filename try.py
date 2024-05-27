@@ -112,7 +112,8 @@ class DataMigrator:
         if file_format == 'parquet':
             df.write.mode('overwrite').parquet(output_path)
         elif file_format == 'csv':
-            df.write.mode('overwrite').csv(output_path)
+            # df.write.mode('overwrite').csv(output_path)
+            df.write.mode('overwrite').option("header", "true").csv(output_path)
         elif file_format == 'json':
             df.write.mode('overwrite').json(output_path)
         else:
@@ -120,6 +121,7 @@ class DataMigrator:
 
     def migrate_data(self, source_details, job_config, destination_details):
         df = self.read_data_source(source_details, job_config)
+        df.show(5)
         df = self.df_transformation(df, source_details)
         self.write_to_destination(df, destination_details)
 
@@ -142,4 +144,4 @@ if __name__ == "__main__":
     job_config = combined_config.get('job', {})
     destination_details = combined_config.get('destination', {})
     migrator.migrate_data(source_details, job_config, destination_details)
-    
+
